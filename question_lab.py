@@ -5,7 +5,6 @@ import numpy as np
 from openai import OpenAI
 
 # --- CONFIGURATION ---
-# Check if secrets are available, otherwise warn user
 if "OPENAI_API_KEY" in st.secrets:
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 else:
@@ -55,7 +54,7 @@ def generate_topic_data(topic_name):
         st.error(f"Error generating science: {e}")
         return None
 
-# --- 2. PROFESSOR SPARK (The Host) ---
+# --- 2. PROFESSOR SPARK ---
 def get_coach_response(chat_history, topic, current_stage_data, level, grade_data):
     target = current_stage_data.get('required_concept', 'The Concept')
     clue = current_stage_data.get('teaser_hook', 'A cool fact')
@@ -90,7 +89,7 @@ def get_coach_response(chat_history, topic, current_stage_data, level, grade_dat
     )
     return response.choices[0].message.content
 
-# --- 3. THE LAB SAFETY OFFICER (Grader) ---
+# --- 3. THE LAB SAFETY OFFICER ---
 def get_grader_score(student_input, topic, current_stage_data):
     target = current_stage_data.get('required_concept', 'The Target')
     
@@ -128,10 +127,9 @@ def get_grader_score(student_input, topic, current_stage_data):
 # --- 4. UI & STYLING ---
 st.set_page_config(page_title="The Science Lab", page_icon="🧪", layout="wide")
 
-# MAD SCIENCE CSS (FIXED FONT BUG)
 st.markdown("""
 <style>
-    /* Main Background */
+    /* Main App Background */
     .stApp {
         background-color: #f0fdf4; 
         background-image: 
@@ -160,21 +158,31 @@ st.markdown("""
         border-right: 5px solid #4ade80; 
     }
 
-    /* FIX: Targeted Font Application (Avoids breaking Arrows) */
-    [data-testid="stSidebar"] .stMarkdown h1, 
-    [data-testid="stSidebar"] .stMarkdown h2, 
-    [data-testid="stSidebar"] .stMarkdown p, 
-    [data-testid="stSidebar"] .stTextInput label, 
-    [data-testid="stSidebar"] .stButton button { 
+    /* --- FIXED CSS SECTIONS --- */
+    
+    /* 1. Fix "smart_toy" bug: Only target specific text, NOT icons */
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] label { 
         color: #4ade80 !important; 
         font-family: 'Courier New', monospace !important; 
     }
 
-    /* Input Box */
+    /* 2. Fix Dark Input Box: Force White Background */
+    [data-testid="stSidebar"] input { 
+        background-color: #ffffff !important;
+        color: #000000 !important; 
+        border: 2px solid #4ade80 !important;
+    }
+    
+    /* 3. Main Input Box (Bottom of screen) */
     .stTextInput input { 
         color: #000000 !important; 
         border: 3px solid #16a34a; 
         border-radius: 0px; 
+        background-color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -184,9 +192,8 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "level" not in st.session_state: st.session_state.level = 0
 if "win" not in st.session_state: st.session_state.win = False
 
-# --- FAKE DASHBOARD DATA GENERATOR ---
+# --- FAKE DASHBOARD DATA ---
 def generate_fake_dashboard_data():
-    # Simulate 30 students
     data = {
         'Student': [f'Student {i}' for i in range(1, 31)],
         'Current Level': np.random.choice([0, 1, 2, 3], 30, p=[0.1, 0.3, 0.4, 0.2]),
@@ -195,11 +202,10 @@ def generate_fake_dashboard_data():
     }
     return pd.DataFrame(data)
 
-# --- SIDEBAR & NAVIGATION ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("⚡ LAB CONTROLS")
     
-    # MODE SWITCHER
     mode = st.radio("System Mode", ["🧪 Experiment", "👨‍🏫 Teacher Dashboard"])
     
     if mode == "🧪 Experiment":
@@ -214,16 +220,15 @@ with st.sidebar:
                     st.session_state.level = 0
                     st.session_state.win = False
                     
-                    # INTRO
                     first_stage = data['stages'][0]
                     hook = first_stage.get('teaser_hook', 'First Clue')
                     intro = f"**WELCOME TO THE LAB!** 🥽 \n\nToday we are investigating **{new_topic}**. \n\nHERE IS YOUR FIRST CLUE: \n\n🧪 **{hook}**\n\nAsk me a question to start the reaction!"
                     st.session_state.messages.append({"role": "assistant", "content": intro})
                     st.rerun()
 
-# --- MAIN PAGE LOGIC ---
+# --- MAIN LOGIC ---
 
-# 1. TEACHER DASHBOARD VIEW
+# 1. TEACHER DASHBOARD
 if mode == "👨‍🏫 Teacher Dashboard":
     st.title("👨‍🏫 Teacher Command Center")
     
@@ -231,11 +236,8 @@ if mode == "👨‍🏫 Teacher Dashboard":
     
     if password == "SCIENCE":
         st.success("ACCESS GRANTED")
-        
-        # Load Fake Data (In a real app, this would connect to Google Sheets)
         df = generate_fake_dashboard_data()
         
-        # Top Stats
         col1, col2, col3 = st.columns(3)
         col1.metric("Active Students", "30")
         col2.metric("Concept Mastery", "62%")
@@ -243,7 +245,6 @@ if mode == "👨‍🏫 Teacher Dashboard":
         
         st.markdown("---")
         
-        # Charts
         c1, c2 = st.columns(2)
         with c1:
             st.subheader("📊 Class Progress")
@@ -264,9 +265,9 @@ if mode == "👨‍🏫 Teacher Dashboard":
     elif password:
         st.error("ACCESS DENIED. TRY 'SCIENCE'")
     
-    st.stop() # Stop here so we don't show the experiment UI
+    st.stop()
 
-# 2. EXPERIMENT VIEW (Student Mode)
+# 2. EXPERIMENT MODE
 if "topic_data" not in st.session_state:
     st.info("👈 ENTER A TOPIC IN THE SIDEBAR TO START THE EXPERIMENT!")
     st.stop()
@@ -274,7 +275,6 @@ if "topic_data" not in st.session_state:
 topic_data = st.session_state.topic_data
 st.title(f"🧪 Experiment: {st.session_state.current_topic}")
 
-# LEVEL TRACKER
 cols = st.columns(3)
 for i in range(3):
     stage_info = topic_data['stages'][i]
@@ -288,12 +288,10 @@ for i in range(3):
     else:
         cols[i].markdown(f"🔒 ???")
 
-# CHAT
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# INPUT
 if not st.session_state.win:
     current_stage = topic_data['stages'][st.session_state.level]
 
@@ -303,10 +301,8 @@ if not st.session_state.win:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Grade
         grade_data = get_grader_score(prompt, st.session_state.current_topic, current_stage)
         
-        # Safety Check
         if grade_data.get('is_relevant') is False:
             warning_msg = f"🛑 **LAB SAFETY ALERT:** \n\n{grade_data.get('feedback', 'Stay on topic!')}\n\n*Let's get back to {st.session_state.current_topic}.*"
             st.session_state.messages.append({"role": "assistant", "content": warning_msg})
@@ -314,7 +310,6 @@ if not st.session_state.win:
                 st.error(warning_msg)
             st.stop()
 
-        # Check Win
         if grade_data['score'] >= 80:
             st.session_state.level += 1
             if st.session_state.level >= 3:
@@ -332,7 +327,6 @@ if not st.session_state.win:
                 st.session_state.messages.append({"role": "assistant", "content": bridge_msg})
                 st.rerun()
         else:
-            # Coach Response
             reply = get_coach_response(
                 st.session_state.messages, 
                 st.session_state.current_topic, 
