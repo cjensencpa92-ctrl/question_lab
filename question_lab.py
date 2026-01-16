@@ -1,9 +1,16 @@
 import streamlit as st
 import json
+import pandas as pd
+import numpy as np
 from openai import OpenAI
 
 # --- CONFIGURATION ---
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Check if secrets are available, otherwise warn user
+if "OPENAI_API_KEY" in st.secrets:
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+else:
+    st.error("🚨 API Key Missing! Please add it to .streamlit/secrets.toml")
+    st.stop()
 
 # --- 1. THE MAD SCIENCE GENERATOR ---
 def generate_topic_data(topic_name):
@@ -72,8 +79,6 @@ def get_coach_response(chat_history, topic, current_stage_data, level, grade_dat
     2. **IF SCORE 41-79 (Weak Input):**
        - "Good, but we need MORE POWER! 🔋"
        - "Don't just ask 'What is it?'... that's too quiet! Ask HOW it {verb} the universe!"
-       
-    3. **General Vibe:** Use emojis (🧪, ⚡, 🤯). Be Bill Nye meets a game show host.
     """
     
     messages = [{"role": "system", "content": system_prompt}] + chat_history
@@ -121,12 +126,12 @@ def get_grader_score(student_input, topic, current_stage_data):
     return json.loads(response.choices[0].message.content)
 
 # --- 4. UI & STYLING ---
-st.set_page_config(page_title="The Science Lab", page_icon="🧪")
+st.set_page_config(page_title="The Science Lab", page_icon="🧪", layout="wide")
 
-# MAD SCIENCE CSS (FIXED)
+# MAD SCIENCE CSS (FIXED FONT BUG)
 st.markdown("""
 <style>
-    /* Main Background: Lab Table */
+    /* Main Background */
     .stApp {
         background-color: #f0fdf4; 
         background-image: 
@@ -149,28 +154,27 @@ st.markdown("""
     }
     .stChatMessage * { color: #000000 !important; font-family: 'Courier New', monospace; font-weight: bold; }
     
-    /* Sidebar: Control Panel (FIXED SELECTORS) */
+    /* Sidebar Background */
     [data-testid="stSidebar"] { 
         background-color: #111827; 
         border-right: 5px solid #4ade80; 
     }
-    
-    /* Only target text elements in sidebar, NOT icons */
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] p, 
-    [data-testid="stSidebar"] label, 
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] div { 
+
+    /* FIX: Targeted Font Application (Avoids breaking Arrows) */
+    [data-testid="stSidebar"] .stMarkdown h1, 
+    [data-testid="stSidebar"] .stMarkdown h2, 
+    [data-testid="stSidebar"] .stMarkdown p, 
+    [data-testid="stSidebar"] .stTextInput label, 
+    [data-testid="stSidebar"] .stButton button { 
         color: #4ade80 !important; 
-        font-family: 'Courier New', monospace; 
+        font-family: 'Courier New', monospace !important; 
     }
-    
+
     /* Input Box */
     .stTextInput input { 
         color: #000000 !important; 
         border: 3px solid #16a34a; 
-        border-radius: 0px;
+        border-radius: 0px; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -180,28 +184,89 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "level" not in st.session_state: st.session_state.level = 0
 if "win" not in st.session_state: st.session_state.win = False
 
-# --- SIDEBAR ---
+# --- FAKE DASHBOARD DATA GENERATOR ---
+def generate_fake_dashboard_data():
+    # Simulate 30 students
+    data = {
+        'Student': [f'Student {i}' for i in range(1, 31)],
+        'Current Level': np.random.choice([0, 1, 2, 3], 30, p=[0.1, 0.3, 0.4, 0.2]),
+        'Topic': np.random.choice(['Volcanoes', 'Black Holes', 'DNA', 'Sharks'], 30),
+        'Red_Flags': np.random.choice([0, 1, 2], 30, p=[0.8, 0.15, 0.05])
+    }
+    return pd.DataFrame(data)
+
+# --- SIDEBAR & NAVIGATION ---
 with st.sidebar:
     st.header("⚡ LAB CONTROLS")
-    new_topic = st.text_input("EXPERIMENT TOPIC:", "Volcanoes")
-    if st.button("BOOT UP LAB"):
-        with st.spinner(f"🧪 MIXING CHEMICALS FOR {new_topic}..."):
-            data = generate_topic_data(new_topic)
-            if data:
-                st.session_state.topic_data = data
-                st.session_state.current_topic = new_topic
-                st.session_state.messages = []
-                st.session_state.level = 0
-                st.session_state.win = False
-                
-                # INTRO
-                first_stage = data['stages'][0]
-                hook = first_stage.get('teaser_hook', 'First Clue')
-                intro = f"**WELCOME TO THE LAB!** 🥽 \n\nToday we are investigating **{new_topic}**. \n\nHERE IS YOUR FIRST CLUE: \n\n🧪 **{hook}**\n\nAsk me a question to start the reaction!"
-                st.session_state.messages.append({"role": "assistant", "content": intro})
-                st.rerun()
+    
+    # MODE SWITCHER
+    mode = st.radio("System Mode", ["🧪 Experiment", "👨‍🏫 Teacher Dashboard"])
+    
+    if mode == "🧪 Experiment":
+        new_topic = st.text_input("EXPERIMENT TOPIC:", "Volcanoes")
+        if st.button("BOOT UP LAB"):
+            with st.spinner(f"🧪 MIXING CHEMICALS FOR {new_topic}..."):
+                data = generate_topic_data(new_topic)
+                if data:
+                    st.session_state.topic_data = data
+                    st.session_state.current_topic = new_topic
+                    st.session_state.messages = []
+                    st.session_state.level = 0
+                    st.session_state.win = False
+                    
+                    # INTRO
+                    first_stage = data['stages'][0]
+                    hook = first_stage.get('teaser_hook', 'First Clue')
+                    intro = f"**WELCOME TO THE LAB!** 🥽 \n\nToday we are investigating **{new_topic}**. \n\nHERE IS YOUR FIRST CLUE: \n\n🧪 **{hook}**\n\nAsk me a question to start the reaction!"
+                    st.session_state.messages.append({"role": "assistant", "content": intro})
+                    st.rerun()
 
-# --- GAME LOOP ---
+# --- MAIN PAGE LOGIC ---
+
+# 1. TEACHER DASHBOARD VIEW
+if mode == "👨‍🏫 Teacher Dashboard":
+    st.title("👨‍🏫 Teacher Command Center")
+    
+    password = st.text_input("Enter Admin Password", type="password")
+    
+    if password == "SCIENCE":
+        st.success("ACCESS GRANTED")
+        
+        # Load Fake Data (In a real app, this would connect to Google Sheets)
+        df = generate_fake_dashboard_data()
+        
+        # Top Stats
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Active Students", "30")
+        col2.metric("Concept Mastery", "62%")
+        col3.metric("Safety Alerts", "4", delta_color="inverse")
+        
+        st.markdown("---")
+        
+        # Charts
+        c1, c2 = st.columns(2)
+        with c1:
+            st.subheader("📊 Class Progress")
+            st.bar_chart(df['Current Level'].value_counts())
+            st.caption("0=Start, 1=Stage 1, 2=Stage 2, 3=Mastered")
+            
+        with c2:
+            st.subheader("🚩 Risk Log (Recent)")
+            risky_students = df[df['Red_Flags'] > 0]
+            st.dataframe(risky_students[['Student', 'Topic', 'Red_Flags']], hide_index=True)
+            
+        st.markdown("---")
+        st.subheader("📝 Live Activity Feed")
+        st.info("Student 12: 'Does gravity affect fire?' (Level 2 Unlocked)")
+        st.warning("Student 05: 'Flagged for Off-Topic input' (Minecraft)")
+        st.success("Student 08: 'Mastered Topic: Black Holes'")
+
+    elif password:
+        st.error("ACCESS DENIED. TRY 'SCIENCE'")
+    
+    st.stop() # Stop here so we don't show the experiment UI
+
+# 2. EXPERIMENT VIEW (Student Mode)
 if "topic_data" not in st.session_state:
     st.info("👈 ENTER A TOPIC IN THE SIDEBAR TO START THE EXPERIMENT!")
     st.stop()
