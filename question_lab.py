@@ -123,12 +123,12 @@ def get_grader_score(student_input, topic, current_stage_data):
 # --- 4. UI & STYLING ---
 st.set_page_config(page_title="The Science Lab", page_icon="🧪")
 
-# MAD SCIENCE CSS
+# MAD SCIENCE CSS (FIXED)
 st.markdown("""
 <style>
-    /* Main Background: Lab Table / Composition Notebook */
+    /* Main Background: Lab Table */
     .stApp {
-        background-color: #f0fdf4; /* Very light green */
+        background-color: #f0fdf4; 
         background-image: 
             linear-gradient(#4ade80 1px, transparent 1px), 
             linear-gradient(90deg, #4ade80 1px, transparent 1px);
@@ -139,19 +139,32 @@ st.markdown("""
     h1 { color: #15803d; font-family: 'Verdana', sans-serif; font-weight: 900; transform: rotate(-1deg); }
     h2, h3 { color: #166534; }
     
-    /* Chat Bubbles: Comic Book Style */
+    /* Chat Bubbles */
     .stChatMessage {
         background-color: white;
         border: 3px solid #000;
         border-radius: 10px;
         padding: 15px;
-        box-shadow: 5px 5px 0px #16a34a; /* Green Shadow */
+        box-shadow: 5px 5px 0px #16a34a; 
     }
     .stChatMessage * { color: #000000 !important; font-family: 'Courier New', monospace; font-weight: bold; }
     
-    /* Sidebar: The Control Panel */
-    [data-testid="stSidebar"] { background-color: #111827; border-right: 5px solid #4ade80; }
-    [data-testid="stSidebar"] * { color: #4ade80 !important; font-family: 'Courier New', monospace; }
+    /* Sidebar: Control Panel (FIXED SELECTORS) */
+    [data-testid="stSidebar"] { 
+        background-color: #111827; 
+        border-right: 5px solid #4ade80; 
+    }
+    
+    /* Only target text elements in sidebar, NOT icons */
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] div { 
+        color: #4ade80 !important; 
+        font-family: 'Courier New', monospace; 
+    }
     
     /* Input Box */
     .stTextInput input { 
@@ -254,7 +267,7 @@ if not st.session_state.win:
                 st.session_state.messages.append({"role": "assistant", "content": bridge_msg})
                 st.rerun()
         else:
-            # The Professor Spark Coach
+            # Coach Response
             reply = get_coach_response(
                 st.session_state.messages, 
                 st.session_state.current_topic, 
