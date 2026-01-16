@@ -160,26 +160,33 @@ st.markdown("""
 
     /* --- FIXED CSS SECTIONS --- */
     
-    /* 1. Fix "smart_toy" bug: Only target specific text, NOT icons */
+    /* 1. Sidebar Text (Headers Only) - Fixes 'smart_toy' bug */
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3, 
-    [data-testid="stSidebar"] p, 
-    [data-testid="stSidebar"] label { 
+    [data-testid="stSidebar"] h3 { 
         color: #4ade80 !important; 
         font-family: 'Courier New', monospace !important; 
     }
+    
+    /* 2. Sidebar Labels (The text above inputs) - Fixes dark text bug */
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] .stRadio label {
+        color: #4ade80 !important;
+        font-family: 'Courier New', monospace !important;
+    }
 
-    /* 2. Fix Dark Input Box: Force White Background */
+    /* 3. Sidebar Input Boxes - Fixes Invisible Cursor */
     [data-testid="stSidebar"] input { 
         background-color: #ffffff !important;
         color: #000000 !important; 
+        caret-color: #000000 !important; /* Forces cursor to be black */
         border: 2px solid #4ade80 !important;
     }
     
-    /* 3. Main Input Box (Bottom of screen) */
+    /* 4. Main Input Box (Bottom of screen) */
     .stTextInput input { 
         color: #000000 !important; 
+        caret-color: #000000 !important;
         border: 3px solid #16a34a; 
         border-radius: 0px; 
         background-color: #ffffff !important;
